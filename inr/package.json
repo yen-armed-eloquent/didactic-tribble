@@ -1,6 +1,7 @@
 {
-  "name": "ig-k8s-scraper",
+  "name": "ig-scraper",
   "version": "1.0.0",
+  "description": "Instagram Comment Scraper",
   "main": "scraper.js",
   "dependencies": {
     "axios": "^1.6.7"
