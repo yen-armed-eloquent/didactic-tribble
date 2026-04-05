@@ -10,9 +10,9 @@ const rawCookiesJson = [
     { "name": "ps_l", "value": "1" },
     { "name": "wd", "value": "1517x674" },
     { "name": "mid", "value": "acr5wgALAAHBhIyl5c18lss1W-Ij" },
-    { "name": "sessionid", "value": "37280264568%3AEo23n7imUAUoLf%3A14%3AAYiEPMa1_46z6X36VhKV7Eq7nbFnxVdj-vdXK7vdEw" },
+    { "name": "sessionid", "value": "37280264568%3AEo23n7imUAUoLf%3A14%3AAYhgAl_jhQXp8_bqszU-ToIW77L7cDVEjHxh4LaA9Q" },
     { "name": "dpr", "value": "0.8999999761581421" },
-    { "name": "rur", "value": "\"LDC\\05437280264568\\0541806926042:01fe553c23ee865b74bc902cb8c2c01bb396eb080c310d22c3549af71ce64e8fe306db12\"" }
+    { "name": "rur", "value": "\"RVA\\05437280264568\\0541806967301:01fea4a4aa50324069d1a536b41d712807ec6b292a79e2182734b4f0c2673ad563b15388\"" }
 ];
 
 const cookieString = rawCookiesJson.map(c => `${c.name}=${c.value}`).join('; ');
