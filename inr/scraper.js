@@ -7,9 +7,12 @@ const rawCookiesJson = [
     { "name": "ds_user_id", "value": "37280264568" },
     { "name": "csrftoken", "value": "Rrz6Ods47cV6L9IaexonDpJy5asTjs64" },
     { "name": "ig_did", "value": "8A708E74-81C2-4848-AAC4-C7CA8B170615" },
-    { "name": "sessionid", "value": "37280264568%3AEo23n7imUAUoLf%3A14%3AAYjJKbGt8l1FK_bdd-Jd3gwc_8GaQRSSmDesG7ANTw" },
+    { "name": "ps_l", "value": "1" },
+    { "name": "wd", "value": "1517x674" },
     { "name": "mid", "value": "acr5wgALAAHBhIyl5c18lss1W-Ij" },
-    { "name": "rur", "value": "\"LDC\\05437280264568\\0541806876861:01fe80d47eca1488c53a6fb6c1a4521b2fc3351d823d91ee3e52b607f44abdedd6a541a6\"" }
+    { "name": "sessionid", "value": "37280264568%3AEo23n7imUAUoLf%3A14%3AAYiEPMa1_46z6X36VhKV7Eq7nbFnxVdj-vdXK7vdEw" },
+    { "name": "dpr", "value": "0.8999999761581421" },
+    { "name": "rur", "value": "\"LDC\\05437280264568\\0541806926042:01fe553c23ee865b74bc902cb8c2c01bb396eb080c310d22c3549af71ce64e8fe306db12\"" }
 ];
 
 const cookieString = rawCookiesJson.map(c => `${c.name}=${c.value}`).join('; ');
