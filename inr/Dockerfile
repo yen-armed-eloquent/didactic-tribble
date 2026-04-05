@@ -1,14 +1,22 @@
 FROM node:20-alpine
 
-# Rclone aur unzip install karna zaroori hai
+# Rclone, unzip aur baqi zaroori tools install karna
 RUN apk add --no-cache curl bash sudo unzip rclone
 
+# Working directory set karna
 WORKDIR /app
-COPY package*.json ./
+
+# Sirf package.json pehle copy kar rahe hain (wildcard * hata diya hai)
+COPY package.json ./
+
+# Dependencies (jaise axios) install karna
 RUN npm install
+
+# Ab baqi saari files (scraper.js, scripts, waghera) copy hongi
 COPY . .
 
-# Data directory banana
+# Results save karne ke liye output directory banana
 RUN mkdir -p /data/output
 
+# Jab container start ho toh scraper chalana
 CMD ["node", "scraper.js"]
