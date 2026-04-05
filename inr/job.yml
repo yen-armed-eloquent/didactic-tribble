@@ -1,0 +1,42 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ig-scraper
+  namespace: scraper
+spec:
+  completions: 5
+  parallelism: 5
+  completionMode: Indexed
+  template:
+    metadata:
+      labels:
+        app: ig-scraper
+    spec:
+      containers:
+      - name: scraper-container
+        image: k3d-registry.localhost:5111/ig-scraper:v1
+        imagePullPolicy: Always
+        env:
+        - name: NODE_INDEX
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.annotations['batch.kubernetes.io/job-completion-index']
+        - name: TOTAL_NODES
+          value: "5"
+        - name: BATCH_FOLDER
+          value: "BATCH_PLACEHOLDER"
+        volumeMounts:
+        - name: links-volume
+          mountPath: /app/links.txt
+          subPath: links.txt
+        - name: data-volume
+          mountPath: /data/output
+      volumes:
+      - name: links-volume
+        configMap:
+          name: scraper-links
+      - name: data-volume
+        hostPath:
+          path: /data/output
+          type: DirectoryOrCreate
+      restartPolicy: Never
