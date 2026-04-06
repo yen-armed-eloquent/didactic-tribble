@@ -17,6 +17,8 @@ spec:
         image: k3d-registry.localhost:5111/ig-scraper:v1
         imagePullPolicy: Always
         env:
+        - name: ACCOUNTS_JSON
+          value: "PLACEHOLDER_FOR_WORKFLOW"
         - name: NODE_INDEX
           valueFrom:
             fieldRef:
