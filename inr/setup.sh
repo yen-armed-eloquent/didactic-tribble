@@ -5,8 +5,7 @@ export KUBECONFIG=$HOME/.k3d-config.yaml
 export BATCH_NAME=$(date +"%Y-%m-%dT%H-%M-%S")
 
 echo "🛠️ Step 1: Rclone & Permissions..."
-# Rclone check aur error ignore if already installed
-curl https://rclone.org/install.sh | sudo bash || true
+curl -s https://rclone.org/install.sh | sudo bash || true
 
 mkdir -p ./results/$BATCH_NAME
 sudo chown -R $USER:$USER ./results && sudo chmod -R 777 ./results
@@ -26,23 +25,14 @@ echo "🚀 Step 4: Building & Deploying..."
 docker build -t k3d-registry.localhost:5111/ig-scraper:v1 .
 docker push k3d-registry.localhost:5111/ig-scraper:v1
 
-# Injecting Batch Name
 sed -i "s|value: \"BATCH_PLACEHOLDER\"|value: \"$BATCH_NAME\"|g" job.yml
 kubectl create namespace scraper --dry-run=client -o yaml | kubectl apply -f -
 kubectl create configmap scraper-links --from-file=links.txt=links.txt -n scraper --dry-run=client -o yaml | kubectl apply -f -
 kubectl apply -f job.yml
 sed -i "s|value: \"$BATCH_NAME\"|value: \"BATCH_PLACEHOLDER\"|g" job.yml
 
-echo "⏳ Step 5: Monitoring Pods..."
-while true; do
-    # Logs check for "Standing By"
-    READY_COUNT=$(kubectl logs -l app=ig-scraper -n scraper 2>/dev/null | grep -c "Standing By" || true)
-    if [ "$READY_COUNT" -ge 5 ]; then
-        echo "✅ All Pods Finished! Finalizing..."
-        chmod +x manager.sh
-        ./manager.sh finalize "$BATCH_NAME"
-        break
-    fi
-    echo "📊 $READY_COUNT / 5 Pods Ready. Waiting 60s..."
-    sleep 60
-done
+echo "⏳ Step 5: Streaming Live Logs from Pods..."
+# Thora wait kar rahe hain taake pods start ho jayein
+sleep 10
+# Ye line aapki screen par har pod ka live progress dikhayegi (ex: 45/100, Retry 2/10)
+kubectl logs -n scraper -l app=ig-scraper -f --prefix=true --all-containers=true
