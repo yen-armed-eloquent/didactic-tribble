@@ -1,36 +1,16 @@
 const fs = require('fs');
 const axios = require('axios');
 
-// 4 Accounts Setup (Ek Pod ke liye ek account)
-const allAccounts = [
-    [ // Account 0
-        { name: "sessionid", value: "34851865843%3AQ2qBU5qbunfnbl%3A16%3AAYg7GpcU_BNeZFg2GdEfZMkov_A7HU5lodT0ndYthg" },
-        { name: "ds_user_id", value: "34851865843" },
-        { name: "csrftoken", value: "CoBFT1SDnGcdRS0i2lov3sCyoxWcKN5g" },
-        { name: "rur", value: "\"CCO\\05434851865843\\0541806695909:01fefc3aaf8954a13afccb53bc6bc14d2076a33013460c5070a1a3928e1352a7dcf1fd86\"" }
-    ],
-    [ // Account 1
-        { name: "sessionid", value: "38788505427%3AoYuwfFVuzDcnq0%3A28%3AAYgrMlQDJouTAum_n9uUXDkOpvkOhxfPHMElK0QdOg" },
-        { name: "ds_user_id", value: "38788505427" },
-        { name: "csrftoken", value: "wXFdA8KB8H8S8yX3d6XDeeMMacoaweMN" },
-        { name: "rur", value: "\"SNB\\05438788505427\\0541806688123:01fee2be22358400075b6c0079c7453c21b0808a17aa260de1345d5926fc89712eded827\"" }
-    ],
-    [ // Account 2
-        { name: "sessionid", value: "39290986204%3AdGwG66mloD5QB1%3A11%3AAYiYyj3Vuy7bXWs5L5GwYi8R_9x-Z_1j5_5haKyfog" },
-        { name: "ds_user_id", value: "39290986204" },
-        { name: "csrftoken", value: "KnG69hXyV3zk6EASVTqf6N511Dlj8Fth" },
-        { name: "rur", value: "\"NCG\\05439290986204\\0541806685218:01fe43f4cf9404375fbad6c5ca4cff1aa203377a9867fd38e62aa13d2c68459fe113f294\"" }
-    ],
-    [ // Account 3
-        { name: "sessionid", value: "37280264568%3AEo23n7imUAUoLf%3A14%3AAYiEPMa1_46z6X36VhKV7Eq7nbFnxVdj-vdXK7vdEw" },
-        { name: "ds_user_id", value: "37280264568" },
-        { name: "csrftoken", value: "Rrz6Ods47cV6L9IaexonDpJy5asTjs64" },
-        { name: "rur", value: "\"LDC\\05437280264568\\0541806456819:01fe5bdd4604a50ef8090f3b159ece39e5263b5a0a20c668af500fe9b44e7286af16dbc5\"" }
-    ]
-];
-
+// GitHub Secrets se accounts uthana
+const allAccounts = JSON.parse(process.env.ACCOUNTS_JSON || "[]");
 const NODE_INDEX = parseInt(process.env.NODE_INDEX || "0");
 const TOTAL_NODES = parseInt(process.env.TOTAL_NODES || "4");
+
+if (allAccounts.length === 0) {
+    console.error("❌ ACCOUNTS_JSON missing!");
+    process.exit(1);
+}
+
 const currentCookies = allAccounts[NODE_INDEX % allAccounts.length];
 const cookieString = currentCookies.map(c => `${c.name}=${c.value}`).join('; ');
 const csrfToken = currentCookies.find(c => c.name === 'csrftoken')?.value || '';
@@ -52,10 +32,7 @@ async function fetchComments(shortcode, cursor = null) {
         let variables = JSON.stringify({ shortcode: shortcode, first: 50, after: cursor });
         let url = `https://www.instagram.com/graphql/query/?query_hash=bc3296d1ce80a24b1b6e40b1e72903f5&variables=${encodeURIComponent(variables)}`;
         const res = await axios.get(url, { headers });
-        if (res.data && res.data.data && res.data.data.shortcode_media) {
-            return res.data.data.shortcode_media.edge_media_to_parent_comment;
-        }
-        return null;
+        return res.data?.data?.shortcode_media?.edge_media_to_parent_comment || null;
     } catch (e) { return null; }
 }
 
@@ -68,37 +45,56 @@ async function scrapeFullPost(shortcode, nodeIdx, workerId, linkIdx, totalLinks)
     const MAX_RETRIES = 10;
     const LIMIT = 10000;
 
-    console.log(`\n🚀 [POD-${nodeIdx} | W-${workerId}] Started Link ${linkIdx}/${totalLinks} | Post: ${shortcode}`);
+    console.log(`\n🚀 [POD-${nodeIdx}] Starting Link ${linkIdx}/${totalLinks} | Post: ${shortcode}`);
 
     while (hasNextPage && allComments.length < LIMIT && retryCount < MAX_RETRIES) {
         const data = await fetchComments(shortcode, cursor);
         
         if (!data || !data.edges || data.edges.length === 0) {
             retryCount++;
-            console.log(`⚠️ [POD-${nodeIdx} | W-${workerId}] 0 data received for ${shortcode}. Retry: ${retryCount}/${MAX_RETRIES}`);
-            await wait(7000); // Wait longer if blocked
+            console.log(`⚠️ [POD-${nodeIdx}] Retry ${retryCount}/10 for ${shortcode}`);
+            await wait(8000);
             continue; 
         }
 
         targetComments = data.count || targetComments;
+        
+        // Yahan hum wo "Rich Data" extract kar rahe hain jo aapne dataset mein dikhaya
         const mapped = data.edges.map(e => ({
             id: e.node.id,
             text: e.node.text,
-            owner_username: e.node.owner.username
+            created_at: e.node.created_at,
+            did_report_as_spam: e.node.did_report_as_spam,
+            owner: {
+                id: e.node.owner.id,
+                username: e.node.owner.username,
+                profile_pic_url: e.node.owner.profile_pic_url, // Avatar Link
+                is_verified: e.node.owner.is_verified
+            },
+            viewer_has_liked: e.node.viewer_has_liked,
+            comment_like_count: e.node.edge_liked_by?.count || 0,
+            // Agar replies bhi chahiye hon toh wo bhi yahan se nikal sakte hain
+            reply_count: e.node.edge_threaded_comments?.count || 0
         }));
+        
         allComments.push(...mapped);
 
-        console.log(`📊 [POD-${nodeIdx} | W-${workerId}] Post: ${shortcode} | Extracted: ${allComments.length}/${targetComments} | Goal: ${LIMIT} | Retries: ${retryCount}/10`);
+        // Aapki requested screen tracking logic
+        console.log(`📊 [POD-${nodeIdx} | W-${workerId}] Progress: ${linkIdx}/${totalLinks} | ${shortcode} | Count: ${allComments.length}/${targetComments} | Goal: ${LIMIT}`);
 
         hasNextPage = data.page_info.has_next_page;
         cursor = data.page_info.end_cursor;
         
         if (allComments.length >= targetComments) break;
-        await wait(3000); // Safe delay between pages
+        await wait(3500); 
     }
 
-    console.log(`✅ [POD-${nodeIdx} | W-${workerId}] Finished: ${shortcode} | Total Saved: ${allComments.length}`);
-    return { shortcode, commentsRawData: allComments };
+    return { 
+        shortcode: shortcode, 
+        total_comments_on_post: targetComments, 
+        fetched_at: new Date().toISOString(),
+        comments: allComments // Ye poora dataset banayega
+    };
 }
 
 async function runEngine(links, nodeIdx, batchFolder) {
@@ -118,10 +114,10 @@ async function runEngine(links, nodeIdx, batchFolder) {
                 currentData.push(fullData);
                 fs.writeFileSync(DATASET_FILE, JSON.stringify(currentData, null, 2));
             }
-            await wait(5000); // Delay before jumping to next post
+            await wait(6000);
         }
     }
-    await Promise.all([worker(1), worker(2), worker(3)]); // 3 Workers per Pod
+    await Promise.all([worker(1), worker(2), worker(3)]);
 }
 
 (async () => {
@@ -130,9 +126,7 @@ async function runEngine(links, nodeIdx, batchFolder) {
         const fileContent = fs.readFileSync('/app/links.txt', 'utf-8');
         const uniqueLinks = [...new Set(fileContent.split(/[\n\s,]+/).filter(Boolean).map(extractShortcode))];
         const myLinks = uniqueLinks.filter((_, i) => i % TOTAL_NODES === NODE_INDEX);
-        console.log(`👤 Pod ${NODE_INDEX} Initialized with Account Index ${NODE_INDEX % allAccounts.length}. Assigned ${myLinks.length} links.`);
+        console.log(`👤 Pod ${NODE_INDEX} online. Account: ${NODE_INDEX % allAccounts.length}. Links: ${myLinks.length}`);
         await runEngine(myLinks, NODE_INDEX, BATCH_FOLDER);
-    } catch (e) {
-        console.error("Critical Error in Pod:", e);
-    }
+    } catch (e) { console.error(e); }
 })();
