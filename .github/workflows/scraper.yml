@@ -1,16 +1,54 @@
-- name: Prepare and Run Scraper
+name: Instagram Scraper CI/CD
+
+on:
+  workflow_dispatch:
+    inputs:
+      batch_name:
+        description: 'Optional: Enter Batch Name (Leave empty for timestamp)'
+        required: false
+        default: ''
+
+jobs:
+  run-scraper:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install Dependencies
+        run: |
+          # Install k3d
+          curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
+          
+          # Install jq and rclone
+          sudo apt-get update
+          sudo apt-get install -y jq rclone
+
+      - name: Prepare and Run Scraper
         working-directory: ./inr
         env:
+          # Secrets se accounts data uthana
           ACCOUNTS_JSON: ${{ secrets.ACCOUNTS_JSON }}
+          BATCH_NAME_INPUT: ${{ github.event.inputs.batch_name }}
         run: |
           chmod +x setup.sh
+          chmod +x manager.sh
+          # Cluster banne se pehle registry host fix karna
+          echo "127.0.0.1 k3d-registry.localhost" | sudo tee -a /etc/hosts
           ./setup.sh
 
       - name: Merge and Upload Results
         working-directory: ./inr
+        if: always() # Taake agar scraper fail bhi ho toh jo data mila wo upload ho jaye
         env:
+          # MEGA credentials secrets se
           MEGA_USER: ${{ secrets.MEGA_USER }}
           MEGA_PASS: ${{ secrets.MEGA_PASS }}
         run: |
+          # Sab se latest batch folder dhoondna (results directory ke andar)
           LATEST_BATCH=$(ls -td ./results/*/ | head -1 | xargs basename)
+          echo "Processing Batch: $LATEST_BATCH"
+          
+          # Merge aur MEGA upload process chalana
           ./manager.sh finalize "$LATEST_BATCH"
