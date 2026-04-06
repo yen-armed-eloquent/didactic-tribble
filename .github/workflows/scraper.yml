@@ -1,46 +1,16 @@
-name: Instagram Scraper CI/CD
-
-on:
-  workflow_dispatch:
-    inputs:
-      batch_name:
-        description: 'Optional: Enter Batch Name'
-        required: false
-        default: ''
-
-jobs:
-  run-scraper:
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Install Dependencies
-        run: |
-          # Install k3d
-          curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
-          # Install jq and rclone
-          sudo apt-get update
-          sudo apt-get install -y jq rclone
-
-      - name: Prepare and Run Scraper
+- name: Prepare and Run Scraper
         working-directory: ./inr
         env:
-          BATCH_NAME: ${{ github.event.inputs.batch_name }}
+          ACCOUNTS_JSON: ${{ secrets.ACCOUNTS_JSON }}
         run: |
           chmod +x setup.sh
-          chmod +x manager.sh
-          # Cluster banne se pehle registry host fix karna
-          echo "127.0.0.1 k3d-registry.localhost" | sudo tee -a /etc/hosts
           ./setup.sh
 
       - name: Merge and Upload Results
         working-directory: ./inr
-        # Hardcoded credentials use honge kyunki manager.sh me wahi hain
+        env:
+          MEGA_USER: ${{ secrets.MEGA_USER }}
+          MEGA_PASS: ${{ secrets.MEGA_PASS }}
         run: |
-          # Batch folder dhoondna
           LATEST_BATCH=$(ls -td ./results/*/ | head -1 | xargs basename)
-          echo "Processing Batch: $LATEST_BATCH"
           ./manager.sh finalize "$LATEST_BATCH"
-        if: always() # Ye hamesha chalega taake jo bhi thora bohat data mile wo upload ho jaye
