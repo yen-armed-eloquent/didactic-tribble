@@ -4,8 +4,8 @@ metadata:
   name: ig-scraper
   namespace: scraper
 spec:
-  completions: 5
-  parallelism: 5
+  completions: 4
+  parallelism: 4
   completionMode: Indexed
   template:
     metadata:
@@ -22,7 +22,7 @@ spec:
             fieldRef:
               fieldPath: metadata.annotations['batch.kubernetes.io/job-completion-index']
         - name: TOTAL_NODES
-          value: "5"
+          value: "4"
         - name: BATCH_FOLDER
           value: "BATCH_PLACEHOLDER"
         volumeMounts:
