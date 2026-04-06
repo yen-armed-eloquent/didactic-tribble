@@ -18,7 +18,10 @@ spec:
         imagePullPolicy: Always
         env:
         - name: ACCOUNTS_JSON
-          value: "PLACEHOLDER_FOR_WORKFLOW"
+          valueFrom:
+            secretKeyRef:
+              name: scraper-secrets
+              key: ACCOUNTS_JSON
         - name: NODE_INDEX
           valueFrom:
             fieldRef:
